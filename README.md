@@ -1,2 +1,2 @@
-# gen3-skills
-Agent skills for the Gen3 platform.
+# gen3-cli
+An agentic CLI for the Gen3 platform.
