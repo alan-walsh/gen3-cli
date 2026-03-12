@@ -14,6 +14,7 @@ The structure mirrors the broad Google Workspace CLI pattern:
 ## Current skills
 
 - `gen3-shared`
+- `gen3-auth`
 - `gen3-fence`
 - `gen3-arborist`
 - `gen3-sheepdog`
