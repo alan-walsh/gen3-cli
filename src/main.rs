@@ -35,6 +35,11 @@ enum Commands {
         #[command(subcommand)]
         resource: commands::IndexdResource,
     },
+    /// Peregrine GraphQL query and metadata operations
+    Peregrine {
+        #[command(subcommand)]
+        resource: commands::PeregrineResource,
+    },
 }
 
 #[derive(Subcommand)]
@@ -64,6 +69,9 @@ async fn main() -> Result<()> {
         }
         Some(Commands::Indexd { resource }) => {
             commands::indexd::run(resource).await?;
+        }
+        Some(Commands::Peregrine { resource }) => {
+            commands::peregrine::run(resource).await?;
         }
     }
 
