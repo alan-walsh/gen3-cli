@@ -20,10 +20,6 @@ jobs:
             target: x86_64-unknown-linux-musl
             artifact_name: gen3-linux-x86_64
             binary_path: target/x86_64-unknown-linux-musl/release/gen3
-          - os: macos-13
-            target: x86_64-apple-darwin
-            artifact_name: gen3-macos-x86_64
-            binary_path: target/x86_64-apple-darwin/release/gen3
           - os: macos-latest
             target: aarch64-apple-darwin
             artifact_name: gen3-macos-aarch64
@@ -59,8 +55,8 @@ jobs:
   release:
     name: Create Release
     needs: build
-    # Run if at least one build job succeeded, even if others failed or were cancelled.
-    if: ${{ always() && contains(needs.build.result, 'success') }}
+    # Run unless every build job failed (allow partial success / cancellation).
+    if: ${{ always() && needs.build.result != 'failure' }}
     runs-on: ubuntu-latest
     steps:
       - name: Download all artifacts
