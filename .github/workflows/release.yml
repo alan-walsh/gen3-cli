@@ -59,6 +59,8 @@ jobs:
   release:
     name: Create Release
     needs: build
+    # Run if at least one build job succeeded, even if others failed or were cancelled.
+    if: ${{ always() && contains(needs.build.result, 'success') }}
     runs-on: ubuntu-latest
     steps:
       - name: Download all artifacts
@@ -69,9 +71,6 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            artifacts/gen3-linux-x86_64/gen3
-            artifacts/gen3-macos-x86_64/gen3
-            artifacts/gen3-macos-aarch64/gen3
-            artifacts/gen3-windows-x86_64.exe/gen3.exe
+          # Glob picks up only artifacts that were actually produced.
+          files: artifacts/**/*
           generate_release_notes: true
