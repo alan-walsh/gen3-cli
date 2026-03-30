@@ -40,6 +40,11 @@ enum Commands {
         #[command(subcommand)]
         resource: commands::PeregrineResource,
     },
+    /// Guppy Elasticsearch aggregation, histogram, and download operations
+    Guppy {
+        #[command(subcommand)]
+        resource: commands::GuppyResource,
+    },
 }
 
 #[derive(Subcommand)]
@@ -72,6 +77,9 @@ async fn main() -> Result<()> {
         }
         Some(Commands::Peregrine { resource }) => {
             commands::peregrine::run(resource).await?;
+        }
+        Some(Commands::Guppy { resource }) => {
+            commands::guppy::run(resource).await?;
         }
     }
 
