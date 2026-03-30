@@ -30,6 +30,11 @@ enum Commands {
         #[command(subcommand)]
         resource: commands::SheepDogResource,
     },
+    /// Indexd GUID, record, bundle, and alias operations
+    Indexd {
+        #[command(subcommand)]
+        resource: commands::IndexdResource,
+    },
 }
 
 #[derive(Subcommand)]
@@ -56,6 +61,9 @@ async fn main() -> Result<()> {
         }
         Some(Commands::Sheepdog { resource }) => {
             commands::sheepdog::run(resource).await?;
+        }
+        Some(Commands::Indexd { resource }) => {
+            commands::indexd::run(resource).await?;
         }
     }
 
