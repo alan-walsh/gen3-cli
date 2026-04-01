@@ -165,6 +165,64 @@ Switch profiles with `gen3 config use <name>`.
 
 ## Skills (AI agent interface)
 
-The `skills/` directory contains `SKILL.md` files that describe each Gen3 service for use with AI coding assistants and agentic CLI tools. Skills follow the same pattern as the `gws` (Google Workspace) CLI: one directory per service with a detailed reference covering endpoints, auth, request/response shapes, and common workflows.
+The `skills/` directory contains a `SKILL.md` reference file for each Gen3 service. These files give AI agent CLIs (GitHub Copilot CLI, Claude, Gemini CLI, and others) the context they need to understand Gen3 endpoints, auth flows, request/response shapes, and common workflows — so the agent can operate the CLI on your behalf.
 
-See [`skills/README.md`](skills/README.md) for the full skills index.
+Each release archive includes the full `skills/` tree alongside the binary.
+
+See [`skills/README.md`](skills/README.md) for the full index of available skills.
+
+### Deploying skills for agent use
+
+After extracting the release archive, register the skills with your agent CLI of choice.
+
+#### GitHub Copilot CLI
+
+Copy the skill directories into your project's extensions folder (project-scoped) or your user extensions directory (available in every project):
+
+```bash
+# Project-scoped (checked into your repo)
+cp -r skills/gen3-* .github/extensions/
+
+# User-scoped (available everywhere)
+# Linux / macOS
+cp -r skills/gen3-* ~/.config/gh-copilot/extensions/
+
+# Windows (PowerShell)
+Copy-Item -Recurse skills\gen3-* "$env:APPDATA\GitHub Copilot CLI\extensions\"
+```
+
+#### Claude / Claude Code
+
+Add the skills directory as project context so Claude can read it during a session:
+
+```bash
+# From your project root — point Claude at the skills tree
+cp -r skills/ .claude/gen3-skills/
+```
+
+Or reference individual `SKILL.md` files directly in your `CLAUDE.md`:
+
+```markdown
+<!-- CLAUDE.md -->
+@.claude/gen3-skills/gen3-shared/SKILL.md
+@.claude/gen3-skills/gen3-indexd/SKILL.md
+```
+
+#### Gemini CLI
+
+Place the skills in your project so Gemini picks them up as context:
+
+```bash
+cp -r skills/ .gemini/gen3-skills/
+```
+
+Then reference them in your `GEMINI.md`:
+
+```markdown
+<!-- GEMINI.md -->
+See .gemini/gen3-skills/ for Gen3 service documentation.
+```
+
+#### Any agent that accepts markdown context
+
+Every `SKILL.md` is plain markdown. Load individual files directly into your agent's context window, paste them into a system prompt, or point your tool at the `skills/` directory — whichever your agent supports.

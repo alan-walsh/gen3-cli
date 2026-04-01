@@ -55,14 +55,14 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           cp ${{ matrix.binary_path }} ${{ matrix.binary_name }}
-          tar -czf ${{ matrix.archive_name }}.tar.gz ${{ matrix.binary_name }} README.md
+          tar -czf ${{ matrix.archive_name }}.tar.gz ${{ matrix.binary_name }} README.md skills/
 
       - name: Package (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           Copy-Item ${{ matrix.binary_path }} ${{ matrix.binary_name }}
-          Compress-Archive -Path ${{ matrix.binary_name }},README.md -DestinationPath ${{ matrix.archive_name }}.zip
+          Compress-Archive -Path ${{ matrix.binary_name }},README.md,skills -DestinationPath ${{ matrix.archive_name }}.zip
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
