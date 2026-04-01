@@ -4,19 +4,27 @@ A fast, profile-aware command-line interface for the [Gen3](https://gen3.org) da
 
 ## Installation
 
-Download the latest binary for your platform from the [Releases](https://github.com/alan-walsh/gen3-cli/releases) page:
+Download the latest archive for your platform from the [Releases](https://github.com/alan-walsh/gen3-cli/releases) page:
 
 | Platform | File |
 |---|---|
-| Linux (x86\_64) | `gen3-linux-x86_64` |
-| macOS (Apple Silicon) | `gen3-macos-aarch64` |
-| Windows (x86\_64) | `gen3-windows-x86_64.exe` |
+| Linux (x86\_64) | `gen3_Linux_amd64.tar.gz` |
+| macOS (Apple Silicon) | `gen3_Darwin_arm64.tar.gz` |
+| Windows (x86\_64) | `gen3_Windows_amd64.zip` |
 
-Make the binary executable and place it on your `PATH`:
+Extract and place the binary on your `PATH`:
 
+**Linux / macOS**
 ```bash
-chmod +x gen3-linux-x86_64
-mv gen3-linux-x86_64 /usr/local/bin/gen3
+tar -xzf gen3_Linux_amd64.tar.gz   # or gen3_Darwin_arm64.tar.gz
+chmod +x gen3
+mv gen3 /usr/local/bin/gen3
+```
+
+**Windows** (PowerShell)
+```powershell
+Expand-Archive gen3_Windows_amd64.zip -DestinationPath gen3_Windows_amd64
+# Move gen3.exe to a directory in your PATH
 ```
 
 ### Build from source
