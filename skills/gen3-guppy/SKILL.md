@@ -1,7 +1,7 @@
 ---
 allowed-tools: Bash, Read, Write, Edit
-argument-hint: [resource] [method] [flags]
-description: Gen3 Guppy: Elasticsearch-backed aggregation, faceted counts, histograms, and record download.
+argument-hint: "[resource] [method] [flags]"
+description: "Gen3 Guppy: Elasticsearch-backed aggregation, faceted counts, histograms, and record download."
 ---
 
 # Gen3 Guppy

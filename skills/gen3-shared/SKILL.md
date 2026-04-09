@@ -1,6 +1,6 @@
 ---
 allowed-tools: Bash, Read, Write, Edit
-argument-hint: [service] [resource] [method] [flags]
+argument-hint: "[service] [resource] [method] [flags]"
 description: Gen3 shared guidance for auth, environment, and cross-service execution.
 ---
 

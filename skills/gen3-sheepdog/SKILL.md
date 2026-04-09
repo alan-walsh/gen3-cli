@@ -1,7 +1,7 @@
 ---
 allowed-tools: Bash, Read, Write, Edit
-argument-hint: [resource] [method] [flags]
-description: Gen3 Sheepdog: Data submission and dictionary operations.
+argument-hint: "[resource] [method] [flags]"
+description: "Gen3 Sheepdog: Data submission and dictionary operations."
 ---
 
 # Gen3 Sheepdog

@@ -1,7 +1,7 @@
 ---
 allowed-tools: Bash, Read, Write, Edit
-argument-hint: [resource] [method] [flags]
-description: Gen3 Manifest Service: Manifest generation and retrieval operations.
+argument-hint: "[resource] [method] [flags]"
+description: "Gen3 Manifest Service: Manifest generation and retrieval operations."
 ---
 
 # Gen3 Manifest Service

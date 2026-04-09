@@ -1,7 +1,7 @@
 ---
 allowed-tools: Bash, Read, Write, Edit
-argument-hint: [resource] [method] [flags]
-description: Gen3 Fence: AuthN/AuthZ, identity, and token operations.
+argument-hint: "[resource] [method] [flags]"
+description: "Gen3 Fence: AuthN/AuthZ, identity, and token operations."
 ---
 
 # Gen3 Fence

@@ -1,7 +1,7 @@
 ---
 allowed-tools: Bash, Read, Write, Edit
-argument-hint: [resource] [method] [flags]
-description: Gen3 Indexd: GUID, DID, and object index record operations.
+argument-hint: "[resource] [method] [flags]"
+description: "Gen3 Indexd: GUID, DID, and object index record operations."
 ---
 
 # Gen3 Indexd

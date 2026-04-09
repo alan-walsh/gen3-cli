@@ -1,3 +1,4 @@
+use keyring::Entry;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
@@ -8,6 +9,9 @@ use anyhow::{Context, Result};
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Profile {
     pub api_endpoint: String,
+    /// Held in memory only — never written to the config file.
+    /// Stored in and retrieved from the OS keychain.
+    #[serde(default, skip_serializing)]
     pub api_key: String,
     pub key_id: String,
 }
@@ -27,6 +31,32 @@ pub struct CredentialsFile {
     pub key_id: String,
 }
 
+/// Returns a keychain entry handle for the given profile name.
+fn keychain_entry(profile_name: &str) -> Result<Entry> {
+    Entry::new("gen3-cli", &format!("api_key:{}", profile_name))
+        .context("Failed to access OS keychain")
+}
+
+/// Stores an API key for the given profile in the OS keychain.
+fn store_api_key(profile_name: &str, api_key: &str) -> Result<()> {
+    keychain_entry(profile_name)?
+        .set_password(api_key)
+        .context("Failed to store API key in OS keychain")
+}
+
+/// Retrieves the API key for the given profile from the OS keychain.
+fn load_api_key(profile_name: &str) -> Result<String> {
+    keychain_entry(profile_name)?
+        .get_password()
+        .with_context(|| {
+            format!(
+                "API key for profile '{}' not found in the OS keychain. \
+                 Run `gen3 auth setup` to re-configure this profile.",
+                profile_name
+            )
+        })
+}
+
 impl Config {
     /// Returns the path to the config directory (~/.gen3/).
     pub fn config_dir() -> Result<PathBuf> {
@@ -40,6 +70,10 @@ impl Config {
     }
 
     /// Load the config from disk, or return an empty Config if the file does not exist.
+    ///
+    /// API keys are never stored in the config file; they are loaded from the OS keychain.
+    /// If an existing config file contains a plaintext `api_key` (legacy format), it is
+    /// automatically migrated into the keychain and the file is rewritten without it.
     pub fn load() -> Result<Self> {
         let path = Self::config_path()?;
         if !path.exists() {
@@ -47,31 +81,99 @@ impl Config {
         }
         let contents = fs::read_to_string(&path)
             .with_context(|| format!("Failed to read config file: {}", path.display()))?;
-        let config: Config = toml::from_str(&contents)
+        let mut config: Config = toml::from_str(&contents)
             .with_context(|| format!("Failed to parse config file: {}", path.display()))?;
+
+        let mut needs_migration = false;
+        for (name, profile) in &mut config.profiles {
+            if !profile.api_key.is_empty() {
+                // Legacy plaintext api_key found in config file — migrate to OS keychain.
+                store_api_key(name, &profile.api_key)
+                    .context("Failed to migrate API key to OS keychain")?;
+                needs_migration = true;
+            } else {
+                // Load api_key from OS keychain.
+                profile.api_key = load_api_key(name)?;
+            }
+        }
+
+        if needs_migration {
+            // Rewrite the config file without the plaintext api_key fields.
+            config.save()?;
+        }
+
         Ok(config)
     }
 
     /// Save the config to disk, creating the ~/.gen3/ directory if necessary.
+    ///
+    /// On Unix, the directory is created/set to 0o700 and the file to 0o600 so that
+    /// only the owning user can read or write it. API keys are never included in the
+    /// serialized output regardless of platform.
     pub fn save(&self) -> Result<()> {
         let dir = Self::config_dir()?;
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::{DirBuilderExt, PermissionsExt};
+            if !dir.exists() {
+                fs::DirBuilder::new()
+                    .recursive(true)
+                    .mode(0o700)
+                    .create(&dir)
+                    .with_context(|| {
+                        format!("Failed to create config directory: {}", dir.display())
+                    })?;
+            } else {
+                fs::set_permissions(&dir, fs::Permissions::from_mode(0o700))
+                    .with_context(|| {
+                        format!(
+                            "Failed to set permissions on config directory: {}",
+                            dir.display()
+                        )
+                    })?;
+            }
+        }
+
+        #[cfg(not(unix))]
         if !dir.exists() {
             fs::create_dir_all(&dir)
                 .with_context(|| format!("Failed to create config directory: {}", dir.display()))?;
         }
+
         let path = Self::config_path()?;
-        let contents = toml::to_string_pretty(self)
-            .context("Failed to serialize config")?;
-        fs::write(&path, contents)
+        let contents = toml::to_string_pretty(self).context("Failed to serialize config")?;
+
+        #[cfg(unix)]
+        {
+            use std::io::Write;
+            use std::os::unix::fs::OpenOptionsExt;
+            let mut file = fs::OpenOptions::new()
+                .write(true)
+                .create(true)
+                .truncate(true)
+                .mode(0o600)
+                .open(&path)
+                .with_context(|| {
+                    format!("Failed to open config file for writing: {}", path.display())
+                })?;
+            file.write_all(contents.as_bytes())
+                .with_context(|| format!("Failed to write config file: {}", path.display()))?;
+        }
+
+        #[cfg(not(unix))]
+        fs::write(&path, &contents)
             .with_context(|| format!("Failed to write config file: {}", path.display()))?;
+
         Ok(())
     }
 
-    /// Add or overwrite a profile and persist the config.
+    /// Add or overwrite a profile, store its API key in the OS keychain, and persist the config.
     pub fn add_profile(&mut self, name: String, profile: Profile) -> Result<()> {
         if self.active_profile.is_none() {
             self.active_profile = Some(name.clone());
         }
+        store_api_key(&name, &profile.api_key)?;
         self.profiles.insert(name, profile);
         self.save()
     }

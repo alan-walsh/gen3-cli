@@ -1,7 +1,7 @@
 ---
 allowed-tools: Bash, Read, Write, Edit
-argument-hint: [resource] [method] [flags]
-description: Gen3 Workspace Token Service: Workspace credential and access-token operations.
+argument-hint: "[resource] [method] [flags]"
+description: "Gen3 Workspace Token Service: Workspace credential and access-token operations."
 ---
 
 # Gen3 Workspace Token Service

@@ -1,7 +1,7 @@
 ---
 allowed-tools: Bash, Read, Write, Edit
-argument-hint: [resource] [method] [flags]
-description: Gen3 Requestor: Access request and approval workflow operations.
+argument-hint: "[resource] [method] [flags]"
+description: "Gen3 Requestor: Access request and approval workflow operations."
 ---
 
 # Gen3 Requestor

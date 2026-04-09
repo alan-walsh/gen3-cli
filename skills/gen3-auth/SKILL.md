@@ -1,7 +1,7 @@
 ---
 allowed-tools: Bash, Read, Write, Edit
-argument-hint: [subcommand] [flags]
-description: Gen3 Auth: Profile management and credential setup operations.
+argument-hint: "[subcommand] [flags]"
+description: "Gen3 Auth: Profile management and credential setup operations."
 ---
 
 # Gen3 Auth

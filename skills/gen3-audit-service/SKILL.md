@@ -1,7 +1,7 @@
 ---
 allowed-tools: Bash, Read, Write, Edit
-argument-hint: [resource] [method] [flags]
-description: Gen3 Audit Service: Audit event query and export operations.
+argument-hint: "[resource] [method] [flags]"
+description: "Gen3 Audit Service: Audit event query and export operations."
 ---
 
 # Gen3 Audit Service

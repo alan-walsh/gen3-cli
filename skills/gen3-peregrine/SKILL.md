@@ -1,7 +1,7 @@
 ---
 allowed-tools: Bash, Read, Write, Edit
-argument-hint: [resource] [method] [flags]
-description: Gen3 Peregrine: GraphQL query and metadata traversal operations.
+argument-hint: "[resource] [method] [flags]"
+description: "Gen3 Peregrine: GraphQL query and metadata traversal operations."
 ---
 
 # Gen3 Peregrine

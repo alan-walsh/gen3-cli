@@ -1,7 +1,7 @@
 ---
 allowed-tools: Bash, Read, Write, Edit
-argument-hint: [resource] [method] [flags]
-description: Gen3 Metadata Service: GUID metadata document operations.
+argument-hint: "[resource] [method] [flags]"
+description: "Gen3 Metadata Service: GUID metadata document operations."
 ---
 
 # Gen3 Metadata Service
