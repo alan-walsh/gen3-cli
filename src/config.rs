@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use anyhow::{Context, Result};
 
 /// A named profile storing all credentials and endpoint info for one Gen3 commons.
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Clone, Serialize, Deserialize, Default)]
 pub struct Profile {
     pub api_endpoint: String,
     /// Held in memory only — never written to the config file.
@@ -16,19 +16,47 @@ pub struct Profile {
     pub key_id: String,
 }
 
+impl std::fmt::Debug for Profile {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Profile")
+            .field("api_endpoint", &self.api_endpoint)
+            .field("api_key", &"[REDACTED]")
+            .field("key_id", &self.key_id)
+            .finish()
+    }
+}
+
 /// Root config structure stored in ~/.gen3/config (TOML format).
-#[derive(Debug, Serialize, Deserialize, Default)]
+#[derive(Serialize, Deserialize, Default)]
 pub struct Config {
     #[serde(default)]
     pub profiles: HashMap<String, Profile>,
     pub active_profile: Option<String>,
 }
 
+impl std::fmt::Debug for Config {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Config")
+            .field("profiles", &self.profiles)
+            .field("active_profile", &self.active_profile)
+            .finish()
+    }
+}
+
 /// The format of the credentials JSON file downloaded from the Gen3 Fence UI.
-#[derive(Debug, Deserialize)]
+#[derive(Deserialize)]
 pub struct CredentialsFile {
     pub api_key: String,
     pub key_id: String,
+}
+
+impl std::fmt::Debug for CredentialsFile {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CredentialsFile")
+            .field("api_key", &"[REDACTED]")
+            .field("key_id", &self.key_id)
+            .finish()
+    }
 }
 
 /// Returns a keychain entry handle for the given profile name.
@@ -194,5 +222,83 @@ impl CredentialsFile {
         let creds: CredentialsFile = serde_json::from_str(&contents)
             .with_context(|| format!("Failed to parse credentials JSON file: {path}"))?;
         Ok(creds)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn profile_debug_redacts_api_key() {
+        let profile = Profile {
+            api_endpoint: "https://example.org".to_string(),
+            api_key: "super-secret-key".to_string(),
+            key_id: "key-abc123".to_string(),
+        };
+        let debug_output = format!("{:?}", profile);
+        assert!(
+            !debug_output.contains("super-secret-key"),
+            "Profile Debug output must not expose the api_key: {debug_output}"
+        );
+        assert!(
+            debug_output.contains("[REDACTED]"),
+            "Profile Debug output must contain [REDACTED]: {debug_output}"
+        );
+        assert!(
+            debug_output.contains("https://example.org"),
+            "Profile Debug output should include api_endpoint: {debug_output}"
+        );
+        assert!(
+            debug_output.contains("key-abc123"),
+            "Profile Debug output should include key_id: {debug_output}"
+        );
+    }
+
+    #[test]
+    fn credentials_file_debug_redacts_api_key() {
+        let creds = CredentialsFile {
+            api_key: "top-secret-api-key".to_string(),
+            key_id: "kid-xyz".to_string(),
+        };
+        let debug_output = format!("{:?}", creds);
+        assert!(
+            !debug_output.contains("top-secret-api-key"),
+            "CredentialsFile Debug output must not expose the api_key: {debug_output}"
+        );
+        assert!(
+            debug_output.contains("[REDACTED]"),
+            "CredentialsFile Debug output must contain [REDACTED]: {debug_output}"
+        );
+        assert!(
+            debug_output.contains("kid-xyz"),
+            "CredentialsFile Debug output should include key_id: {debug_output}"
+        );
+    }
+
+    #[test]
+    fn config_debug_redacts_profile_api_keys() {
+        let mut profiles = HashMap::new();
+        profiles.insert(
+            "prod".to_string(),
+            Profile {
+                api_endpoint: "https://prod.example.org".to_string(),
+                api_key: "prod-secret-key".to_string(),
+                key_id: "prod-key-id".to_string(),
+            },
+        );
+        let config = Config {
+            profiles,
+            active_profile: Some("prod".to_string()),
+        };
+        let debug_output = format!("{:?}", config);
+        assert!(
+            !debug_output.contains("prod-secret-key"),
+            "Config Debug output must not expose profile api_key: {debug_output}"
+        );
+        assert!(
+            debug_output.contains("[REDACTED]"),
+            "Config Debug output must contain [REDACTED]: {debug_output}"
+        );
     }
 }
