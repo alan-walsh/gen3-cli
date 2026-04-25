@@ -1,6 +1,28 @@
 use super::graphql::run_graphql;
 use anyhow::{Context, Result};
 
+const VALID_ACCESSIBILITY: &[&str] = &["all", "accessible", "unaccessible"];
+
+/// Validate that `name` is a legal GraphQL identifier: `[a-zA-Z_][a-zA-Z0-9_]*`.
+fn validate_graphql_identifier(name: &str, label: &str) -> Result<()> {
+    let mut chars = name.chars();
+    let valid = match chars.next() {
+        Some(c) if c.is_ascii_alphabetic() || c == '_' => {
+            chars.all(|c| c.is_ascii_alphanumeric() || c == '_')
+        }
+        _ => false,
+    };
+    if !valid {
+        anyhow::bail!(
+            "Invalid {}: {:?} is not a valid GraphQL identifier \
+             (must match [a-zA-Z_][a-zA-Z0-9_]*)",
+            label,
+            name
+        );
+    }
+    Ok(())
+}
+
 /// Discover the index types available under the Aggregation type.
 async fn available_types() -> Result<Vec<String>> {
     let q = r#"{ __type(name: "Aggregation") { fields { name } } }"#;
@@ -22,6 +44,14 @@ pub async fn counts(
     filter: Option<&str>,
     accessibility: &str,
 ) -> Result<()> {
+    if !VALID_ACCESSIBILITY.contains(&accessibility) {
+        anyhow::bail!(
+            "Invalid accessibility {:?}. Must be one of: {}",
+            accessibility,
+            VALID_ACCESSIBILITY.join(", ")
+        );
+    }
+
     let all_types = available_types().await?;
 
     let target_types: Vec<&str> = if let Some(t) = type_name {
@@ -106,6 +136,27 @@ pub async fn histogram(
     filter: Option<&str>,
     accessibility: &str,
 ) -> Result<()> {
+    // Validate inputs before they are interpolated into the GraphQL query string.
+    validate_graphql_identifier(type_name, "type")?;
+    validate_graphql_identifier(field, "field")?;
+    if !VALID_ACCESSIBILITY.contains(&accessibility) {
+        anyhow::bail!(
+            "Invalid accessibility {:?}. Must be one of: {}",
+            accessibility,
+            VALID_ACCESSIBILITY.join(", ")
+        );
+    }
+
+    // Ensure type_name is one of the types exposed by the server.
+    let all_types = available_types().await?;
+    if !all_types.iter().any(|s| s == type_name) {
+        anyhow::bail!(
+            "Unknown type {:?}. Available types: {}",
+            type_name,
+            all_types.join(", ")
+        );
+    }
+
     // We use asTextHistogram which is defined on both HistogramForString and
     // HistogramForNumber, so this works regardless of the field's ES type.
     let (filter_arg, vars) = if let Some(f) = filter {
