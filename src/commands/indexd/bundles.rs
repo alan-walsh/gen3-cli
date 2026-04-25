@@ -8,7 +8,7 @@ pub async fn list(limit: Option<u32>) -> Result<()> {
         .active_profile()
         .ok_or_else(|| anyhow::anyhow!("No active profile. Run `gen3 auth setup` first."))?;
 
-    let client = reqwest::Client::new();
+    let client = crate::http::create_http_client();
     let mut req = client
         .get(format!("{}/bundle", profile.api_endpoint))
         .query(&[("form", "bundle")]);
@@ -38,7 +38,7 @@ pub async fn get(guid: &str, expand: bool) -> Result<()> {
         .active_profile()
         .ok_or_else(|| anyhow::anyhow!("No active profile. Run `gen3 auth setup` first."))?;
 
-    let client = reqwest::Client::new();
+    let client = crate::http::create_http_client();
     let mut req = client.get(format!("{}/bundle/{}", profile.api_endpoint, guid));
     if expand {
         req = req.query(&[("expand", "true")]);
@@ -66,7 +66,7 @@ pub async fn create(bundles: Vec<String>, name: Option<String>) -> Result<()> {
         .active_profile()
         .ok_or_else(|| anyhow::anyhow!("No active profile. Run `gen3 auth setup` first."))?;
 
-    let client = reqwest::Client::new();
+    let client = crate::http::create_http_client();
     let token = get_access_token(&client, profile).await?;
 
     let mut body = serde_json::json!({ "bundles": bundles });
@@ -104,7 +104,7 @@ pub async fn delete(guid: &str) -> Result<()> {
         .active_profile()
         .ok_or_else(|| anyhow::anyhow!("No active profile. Run `gen3 auth setup` first."))?;
 
-    let client = reqwest::Client::new();
+    let client = crate::http::create_http_client();
     let token = get_access_token(&client, profile).await?;
 
     let url = format!("{}/bundle/{}", profile.api_endpoint, guid);

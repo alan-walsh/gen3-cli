@@ -8,7 +8,7 @@ pub async fn get(id: &str, format: &str) -> Result<()> {
         .active_profile()
         .ok_or_else(|| anyhow::anyhow!("No active profile. Run `gen3 auth setup` first."))?;
 
-    let client = reqwest::Client::new();
+    let client = crate::http::create_http_client();
     let token = get_access_token(&client, profile).await?;
 
     let accept = match format {

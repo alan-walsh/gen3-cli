@@ -16,7 +16,7 @@ async fn run_graphql(
         .active_profile()
         .ok_or_else(|| anyhow::anyhow!("No active profile. Run `gen3 auth setup` first."))?;
 
-    let client = reqwest::Client::new();
+    let client = crate::http::create_http_client();
     let token = get_access_token(&client, profile).await?;
 
     let mut body = serde_json::json!({ "query": query_str });
@@ -153,7 +153,7 @@ pub async fn schema() -> Result<()> {
         .active_profile()
         .ok_or_else(|| anyhow::anyhow!("No active profile. Run `gen3 auth setup` first."))?;
 
-    let client = reqwest::Client::new();
+    let client = crate::http::create_http_client();
     let url = format!("{}/api/v0/submission/getschema", profile.api_endpoint);
     let response = client
         .get(&url)

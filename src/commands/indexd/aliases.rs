@@ -8,7 +8,7 @@ pub async fn list(guid: &str) -> Result<()> {
         .active_profile()
         .ok_or_else(|| anyhow::anyhow!("No active profile. Run `gen3 auth setup` first."))?;
 
-    let client = reqwest::Client::new();
+    let client = crate::http::create_http_client();
     let url = format!("{}/index/{}/aliases", profile.api_endpoint, guid);
     let response = client
         .get(&url)
@@ -52,7 +52,7 @@ pub async fn add(guid: &str, aliases: Vec<String>) -> Result<()> {
         .active_profile()
         .ok_or_else(|| anyhow::anyhow!("No active profile. Run `gen3 auth setup` first."))?;
 
-    let client = reqwest::Client::new();
+    let client = crate::http::create_http_client();
     let token = get_access_token(&client, profile).await?;
 
     let url = format!("{}/index/{}/aliases", profile.api_endpoint, guid);
@@ -95,7 +95,7 @@ pub async fn replace(guid: &str, aliases: Vec<String>) -> Result<()> {
         .active_profile()
         .ok_or_else(|| anyhow::anyhow!("No active profile. Run `gen3 auth setup` first."))?;
 
-    let client = reqwest::Client::new();
+    let client = crate::http::create_http_client();
     let token = get_access_token(&client, profile).await?;
 
     let url = format!("{}/index/{}/aliases", profile.api_endpoint, guid);
@@ -124,7 +124,7 @@ pub async fn delete_all(guid: &str) -> Result<()> {
         .active_profile()
         .ok_or_else(|| anyhow::anyhow!("No active profile. Run `gen3 auth setup` first."))?;
 
-    let client = reqwest::Client::new();
+    let client = crate::http::create_http_client();
     let token = get_access_token(&client, profile).await?;
 
     let url = format!("{}/index/{}/aliases", profile.api_endpoint, guid);
@@ -151,7 +151,7 @@ pub async fn delete_one(guid: &str, alias: &str) -> Result<()> {
         .active_profile()
         .ok_or_else(|| anyhow::anyhow!("No active profile. Run `gen3 auth setup` first."))?;
 
-    let client = reqwest::Client::new();
+    let client = crate::http::create_http_client();
     let token = get_access_token(&client, profile).await?;
 
     let url = format!(
