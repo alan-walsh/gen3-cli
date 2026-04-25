@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 use anyhow::{Context, Result};
+use url::{Host, Url};
 
 /// A named profile storing all credentials and endpoint info for one Gen3 commons.
 #[derive(Clone, Serialize, Deserialize, Default)]
@@ -57,6 +58,66 @@ impl std::fmt::Debug for CredentialsFile {
             .field("key_id", &self.key_id)
             .finish()
     }
+}
+
+/// Validates that `endpoint` is a safe, public HTTPS URL.
+///
+/// Rejects:
+/// - Non-HTTPS schemes (prevents credential theft via HTTP downgrade or exotic schemes)
+/// - Private / loopback / link-local hosts (prevents SSRF against internal services
+///   such as cloud metadata endpoints)
+pub fn validate_endpoint(endpoint: &str) -> Result<()> {
+    let url = Url::parse(endpoint).context("api_endpoint is not a valid URL")?;
+
+    if url.scheme() != "https" {
+        anyhow::bail!(
+            "api_endpoint must use HTTPS (got '{}'). \
+             Plain-text or non-HTTPS schemes expose credentials in transit.",
+            url.scheme()
+        );
+    }
+
+    match url.host() {
+        None => anyhow::bail!("api_endpoint must include a host name"),
+        Some(Host::Domain(host)) => {
+            // Block localhost variants
+            let is_localhost = host == "localhost" || host.ends_with(".localhost");
+            // Block well-known cloud metadata service hostnames
+            let is_metadata_service = host == "metadata.google.internal"
+                || host == "metadata.goog"
+                || host == "instance-data"; // DigitalOcean
+            if is_localhost || is_metadata_service {
+                anyhow::bail!(
+                    "api_endpoint host '{}' is not allowed. Use a public HTTPS endpoint.",
+                    host
+                );
+            }
+        }
+        Some(Host::Ipv4(addr)) => {
+            if addr.is_loopback() || addr.is_private() || addr.is_link_local() {
+                anyhow::bail!(
+                    "api_endpoint IP address '{}' is private or reserved. \
+                     Use a public HTTPS endpoint.",
+                    addr
+                );
+            }
+        }
+        Some(Host::Ipv6(addr)) => {
+            let o = addr.octets();
+            // ::1 loopback, fc00::/7 unique-local, fe80::/10 link-local
+            let is_unique_local = o[0] & 0xfe == 0xfc;
+            let is_link_local = o[0] == 0xfe && o[1] & 0xc0 == 0x80;
+            if addr.is_loopback() || is_unique_local || is_link_local {
+                anyhow::bail!(
+                    "api_endpoint IPv6 address '{}' is loopback or private. \
+                     Use a public HTTPS endpoint.",
+                    addr
+                );
+            }
+        }
+    }
+
+    Ok(())
 }
 
 /// Returns a keychain entry handle for the given profile name.
@@ -197,7 +258,11 @@ impl Config {
     }
 
     /// Add or overwrite a profile, store its API key in the OS keychain, and persist the config.
+    ///
+    /// Returns an error if `profile.api_endpoint` fails HTTPS / SSRF validation.
     pub fn add_profile(&mut self, name: String, profile: Profile) -> Result<()> {
+        validate_endpoint(&profile.api_endpoint)
+            .context("Invalid api_endpoint")?;
         if self.active_profile.is_none() {
             self.active_profile = Some(name.clone());
         }
@@ -300,5 +365,79 @@ mod tests {
             debug_output.contains("[REDACTED]"),
             "Config Debug output must contain [REDACTED]: {debug_output}"
         );
+    }
+
+    #[test]
+    fn valid_https_endpoint_is_accepted() {
+        assert!(validate_endpoint("https://commons.example.org").is_ok());
+        assert!(validate_endpoint("https://gen3.datacommons.io").is_ok());
+    }
+
+    #[test]
+    fn http_scheme_is_rejected() {
+        let err = validate_endpoint("http://commons.example.org").unwrap_err();
+        assert!(err.to_string().contains("HTTPS"), "expected HTTPS error, got: {err}");
+    }
+
+    #[test]
+    fn non_http_schemes_are_rejected() {
+        for scheme in &["file:///etc/passwd", "gopher://example.org", "ftp://example.org"] {
+            let err = validate_endpoint(scheme).unwrap_err();
+            assert!(
+                err.to_string().contains("HTTPS"),
+                "expected HTTPS error for {scheme}, got: {err}"
+            );
+        }
+    }
+
+    #[test]
+    fn localhost_is_rejected() {
+        let err = validate_endpoint("https://localhost/api").unwrap_err();
+        assert!(err.to_string().contains("not allowed"), "got: {err}");
+    }
+
+    #[test]
+    fn loopback_ipv4_is_rejected() {
+        let err = validate_endpoint("https://127.0.0.1/api").unwrap_err();
+        assert!(err.to_string().contains("private or reserved"), "got: {err}");
+    }
+
+    #[test]
+    fn private_ipv4_ranges_are_rejected() {
+        for addr in &["10.0.0.1", "192.168.1.1", "172.16.0.1"] {
+            let endpoint = format!("https://{addr}/api");
+            let err = validate_endpoint(&endpoint).unwrap_err();
+            assert!(
+                err.to_string().contains("private or reserved"),
+                "expected private address error for {addr}, got: {err}"
+            );
+        }
+    }
+
+    #[test]
+    fn link_local_ipv4_is_rejected() {
+        let err = validate_endpoint("https://169.254.169.254/latest/meta-data").unwrap_err();
+        assert!(err.to_string().contains("private or reserved"), "got: {err}");
+    }
+
+    #[test]
+    fn loopback_ipv6_is_rejected() {
+        let err = validate_endpoint("https://[::1]/api").unwrap_err();
+        assert!(err.to_string().contains("loopback or private"), "got: {err}");
+    }
+
+    #[test]
+    fn metadata_hostname_is_rejected() {
+        let err = validate_endpoint("https://metadata.google.internal/computeMetadata/v1").unwrap_err();
+        assert!(err.to_string().contains("not allowed"), "got: {err}");
+
+        let err2 = validate_endpoint("https://metadata.goog/").unwrap_err();
+        assert!(err2.to_string().contains("not allowed"), "got: {err2}");
+    }
+
+    #[test]
+    fn invalid_url_is_rejected() {
+        let err = validate_endpoint("not a url").unwrap_err();
+        assert!(err.to_string().contains("valid URL"), "got: {err}");
     }
 }
