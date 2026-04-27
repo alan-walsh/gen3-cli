@@ -21,6 +21,9 @@ target
 #.idea/
 
 
-# Added by cargo
+# Playwright MCP artifacts
+.playwright-mcp/
 
-/target
+# macOS metadata files
+.DS_Store
+**/.DS_Store
