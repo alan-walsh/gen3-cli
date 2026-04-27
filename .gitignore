@@ -23,3 +23,7 @@ target
 
 # Playwright MCP artifacts
 .playwright-mcp/
+
+# macOS metadata files
+.DS_Store
+**/.DS_Store
