@@ -64,11 +64,18 @@ impl std::fmt::Debug for CredentialsFile {
 ///
 /// Rejects:
 /// - Non-HTTPS schemes (prevents credential theft via HTTP downgrade or exotic schemes)
+/// - URLs with embedded userinfo (prevents accidentally persisting credentials in config/logs)
 /// - Private / loopback / link-local hosts (prevents SSRF against internal services
 ///   such as cloud metadata endpoints)
 pub fn validate_endpoint(endpoint: &str) -> Result<()> {
     let url = Url::parse(endpoint).context("api_endpoint is not a valid URL")?;
 
+    if !url.username().is_empty() || url.password().is_some() {
+        anyhow::bail!(
+            "api_endpoint must not include embedded credentials in the URL. \
+             Provide only the HTTPS endpoint host/path."
+        );
+    }
     if url.scheme() != "https" {
         anyhow::bail!(
             "api_endpoint must use HTTPS (got '{}'). \
