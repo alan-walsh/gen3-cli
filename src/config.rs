@@ -60,13 +60,20 @@ impl std::fmt::Debug for CredentialsFile {
     }
 }
 
-/// Validates that `endpoint` is a safe, public HTTPS URL.
+/// Validates that `endpoint` is an HTTPS URL and rejects obvious non-public hosts.
 ///
 /// Rejects:
 /// - Non-HTTPS schemes (prevents credential theft via HTTP downgrade or exotic schemes)
 /// - URLs with embedded userinfo (prevents accidentally persisting credentials in config/logs)
-/// - Private / loopback / link-local hosts (prevents SSRF against internal services
-///   such as cloud metadata endpoints)
+/// - Hostname literals such as `localhost` and a small denylist of well-known cloud metadata
+///   service hostnames
+/// - Non-public IP address literals (helps prevent SSRF against internal services such as
+///   cloud metadata endpoints; covers loopback, private, link-local, multicast, broadcast,
+///   documentation, shared address space (RFC 6598), and unspecified addresses)
+///
+/// Note: for domain names this validation only examines the hostname string and does not
+/// resolve DNS. It therefore cannot guarantee that a domain will not resolve to a private,
+/// loopback, or link-local address (for example via split-horizon DNS or DNS rebinding).
 pub fn validate_endpoint(endpoint: &str) -> Result<()> {
     let url = Url::parse(endpoint).context("api_endpoint is not a valid URL")?;
 
@@ -101,9 +108,25 @@ pub fn validate_endpoint(endpoint: &str) -> Result<()> {
             }
         }
         Some(Host::Ipv4(addr)) => {
-            if addr.is_loopback() || addr.is_private() || addr.is_link_local() {
+            // Stable checks for all non-public IPv4 ranges:
+            //   loopback (127/8), private RFC-1918, link-local (169.254/16),
+            //   multicast (224/4), broadcast, documentation (192.0.2/24 etc.),
+            //   unspecified (0.0.0.0), shared address space 100.64/10 (RFC 6598).
+            let is_shared = {
+                let o = addr.octets();
+                o[0] == 100 && o[1] & 0xC0 == 0x40
+            };
+            if addr.is_loopback()
+                || addr.is_private()
+                || addr.is_link_local()
+                || addr.is_multicast()
+                || addr.is_broadcast()
+                || addr.is_documentation()
+                || addr.is_unspecified()
+                || is_shared
+            {
                 anyhow::bail!(
-                    "api_endpoint IP address '{}' is loopback, private, or link-local. \
+                    "api_endpoint IP address '{}' is not a publicly routable address. \
                      Use a public HTTPS endpoint.",
                     addr
                 );
@@ -111,23 +134,37 @@ pub fn validate_endpoint(endpoint: &str) -> Result<()> {
         }
         Some(Host::Ipv6(addr)) => {
             let o = addr.octets();
-            // ::1 loopback, fc00::/7 unique-local, fe80::/10 link-local
+            // fc00::/7 unique-local, fe80::/10 link-local
             let is_unique_local = o[0] & 0xfe == 0xfc;
             let is_link_local = o[0] == 0xfe && o[1] & 0xc0 == 0x80;
             if addr.is_loopback() || is_unique_local || is_link_local {
                 anyhow::bail!(
-                    "api_endpoint IPv6 address '{}' is loopback or private. \
+                    "api_endpoint IPv6 address '{}' is not a publicly routable address. \
                      Use a public HTTPS endpoint.",
                     addr
                 );
             }
             // Block IPv4-mapped (::ffff:x.x.x.x) and IPv4-compatible (::x.x.x.x)
             // addresses to prevent bypassing IPv4 restrictions via IPv6 notation.
+            // Note: Ipv6Addr::is_global() returns true for ::ffff:169.254.x.x because
+            // it does not inspect the embedded IPv4, so we must extract and check it.
             if let Some(ipv4) = addr.to_ipv4_mapped().or_else(|| addr.to_ipv4()) {
-                if ipv4.is_loopback() || ipv4.is_private() || ipv4.is_link_local() {
+                let is_shared = {
+                    let o = ipv4.octets();
+                    o[0] == 100 && o[1] & 0xC0 == 0x40
+                };
+                if ipv4.is_loopback()
+                    || ipv4.is_private()
+                    || ipv4.is_link_local()
+                    || ipv4.is_multicast()
+                    || ipv4.is_broadcast()
+                    || ipv4.is_documentation()
+                    || ipv4.is_unspecified()
+                    || is_shared
+                {
                     anyhow::bail!(
-                        "api_endpoint IPv6 address '{}' maps to a loopback, private, or \
-                         link-local IPv4 address. Use a public HTTPS endpoint.",
+                        "api_endpoint IPv6 address '{}' maps to a non-public IPv4 address. \
+                         Use a public HTTPS endpoint.",
                         addr
                     );
                 }
@@ -428,7 +465,7 @@ mod tests {
     #[test]
     fn loopback_ipv4_is_rejected() {
         let err = validate_endpoint("https://127.0.0.1/api").unwrap_err();
-        assert!(err.to_string().contains("loopback, private, or link-local"), "got: {err}");
+        assert!(err.to_string().contains("not a publicly routable"), "got: {err}");
     }
 
     #[test]
@@ -437,8 +474,8 @@ mod tests {
             let endpoint = format!("https://{addr}/api");
             let err = validate_endpoint(&endpoint).unwrap_err();
             assert!(
-                err.to_string().contains("loopback, private, or link-local"),
-                "expected loopback/private/link-local error for {addr}, got: {err}"
+                err.to_string().contains("not a publicly routable"),
+                "expected non-public error for {addr}, got: {err}"
             );
         }
     }
@@ -446,25 +483,38 @@ mod tests {
     #[test]
     fn link_local_ipv4_is_rejected() {
         let err = validate_endpoint("https://169.254.169.254/latest/meta-data").unwrap_err();
-        assert!(err.to_string().contains("loopback, private, or link-local"), "got: {err}");
+        assert!(err.to_string().contains("not a publicly routable"), "got: {err}");
+    }
+
+    #[test]
+    fn non_public_ipv4_ranges_are_rejected() {
+        // Unspecified (0.0.0.0), multicast (224.x), documentation (192.0.2.x), broadcast
+        for addr in &["0.0.0.0", "224.0.0.1", "192.0.2.1", "255.255.255.255"] {
+            let endpoint = format!("https://{addr}/api");
+            let err = validate_endpoint(&endpoint).unwrap_err();
+            assert!(
+                err.to_string().contains("not a publicly routable"),
+                "expected non-public error for {addr}, got: {err}"
+            );
+        }
     }
 
     #[test]
     fn loopback_ipv6_is_rejected() {
         let err = validate_endpoint("https://[::1]/api").unwrap_err();
-        assert!(err.to_string().contains("loopback or private"), "got: {err}");
+        assert!(err.to_string().contains("not a publicly routable"), "got: {err}");
     }
 
     #[test]
     fn unique_local_ipv6_is_rejected() {
         let err = validate_endpoint("https://[fc00::1]/api").unwrap_err();
-        assert!(err.to_string().contains("loopback or private"), "got: {err}");
+        assert!(err.to_string().contains("not a publicly routable"), "got: {err}");
     }
 
     #[test]
     fn link_local_ipv6_is_rejected() {
         let err = validate_endpoint("https://[fe80::1]/api").unwrap_err();
-        assert!(err.to_string().contains("loopback or private"), "got: {err}");
+        assert!(err.to_string().contains("not a publicly routable"), "got: {err}");
     }
 
     #[test]
@@ -472,7 +522,7 @@ mod tests {
         // ::ffff:127.0.0.1 — IPv4-mapped IPv6 loopback bypass
         let err = validate_endpoint("https://[::ffff:127.0.0.1]/api").unwrap_err();
         assert!(
-            err.to_string().contains("maps to a loopback, private, or link-local IPv4"),
+            err.to_string().contains("maps to a non-public IPv4"),
             "got: {err}"
         );
     }
@@ -482,7 +532,7 @@ mod tests {
         // ::ffff:169.254.169.254 — IPv4-mapped IPv6 AWS metadata bypass
         let err = validate_endpoint("https://[::ffff:169.254.169.254]/latest/meta-data").unwrap_err();
         assert!(
-            err.to_string().contains("maps to a loopback, private, or link-local IPv4"),
+            err.to_string().contains("maps to a non-public IPv4"),
             "got: {err}"
         );
     }
@@ -492,7 +542,7 @@ mod tests {
         // ::ffff:10.0.0.1 — IPv4-mapped IPv6 private RFC-1918 bypass
         let err = validate_endpoint("https://[::ffff:10.0.0.1]/api").unwrap_err();
         assert!(
-            err.to_string().contains("maps to a loopback, private, or link-local IPv4"),
+            err.to_string().contains("maps to a non-public IPv4"),
             "got: {err}"
         );
     }
