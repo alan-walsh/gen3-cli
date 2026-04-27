@@ -114,6 +114,17 @@ pub fn validate_endpoint(endpoint: &str) -> Result<()> {
                     addr
                 );
             }
+            // Block IPv4-mapped (::ffff:x.x.x.x) and IPv4-compatible (::x.x.x.x)
+            // addresses to prevent bypassing IPv4 restrictions via IPv6 notation.
+            if let Some(ipv4) = addr.to_ipv4_mapped().or_else(|| addr.to_ipv4()) {
+                if ipv4.is_loopback() || ipv4.is_private() || ipv4.is_link_local() {
+                    anyhow::bail!(
+                        "api_endpoint IPv6 address '{}' maps to a private or reserved IPv4 \
+                         address. Use a public HTTPS endpoint.",
+                        addr
+                    );
+                }
+            }
         }
     }
 
@@ -424,6 +435,36 @@ mod tests {
     fn loopback_ipv6_is_rejected() {
         let err = validate_endpoint("https://[::1]/api").unwrap_err();
         assert!(err.to_string().contains("loopback or private"), "got: {err}");
+    }
+
+    #[test]
+    fn ipv4_mapped_ipv6_loopback_is_rejected() {
+        // ::ffff:127.0.0.1 — IPv4-mapped IPv6 loopback bypass
+        let err = validate_endpoint("https://[::ffff:127.0.0.1]/api").unwrap_err();
+        assert!(
+            err.to_string().contains("maps to a private or reserved IPv4"),
+            "got: {err}"
+        );
+    }
+
+    #[test]
+    fn ipv4_mapped_ipv6_link_local_is_rejected() {
+        // ::ffff:169.254.169.254 — IPv4-mapped IPv6 AWS metadata bypass
+        let err = validate_endpoint("https://[::ffff:169.254.169.254]/latest/meta-data").unwrap_err();
+        assert!(
+            err.to_string().contains("maps to a private or reserved IPv4"),
+            "got: {err}"
+        );
+    }
+
+    #[test]
+    fn ipv4_mapped_ipv6_private_is_rejected() {
+        // ::ffff:10.0.0.1 — IPv4-mapped IPv6 private RFC-1918 bypass
+        let err = validate_endpoint("https://[::ffff:10.0.0.1]/api").unwrap_err();
+        assert!(
+            err.to_string().contains("maps to a private or reserved IPv4"),
+            "got: {err}"
+        );
     }
 
     #[test]
