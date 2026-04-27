@@ -1,4 +1,5 @@
 mod config;
+mod http;
 mod auth;
 mod ui;
 mod commands;

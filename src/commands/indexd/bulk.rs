@@ -7,7 +7,7 @@ pub async fn get(ids: Vec<String>) -> Result<()> {
         .active_profile()
         .ok_or_else(|| anyhow::anyhow!("No active profile. Run `gen3 auth setup` first."))?;
 
-    let client = reqwest::Client::new();
+    let client = crate::http::create_http_client();
     let body = serde_json::json!({ "ids": ids });
 
     let url = format!("{}/bulk/documents", profile.api_endpoint);

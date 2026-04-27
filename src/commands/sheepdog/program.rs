@@ -14,7 +14,7 @@ pub async fn list() -> Result<()> {
         .active_profile()
         .ok_or_else(|| anyhow::anyhow!("No active profile. Run `gen3 auth setup` first."))?;
 
-    let client = reqwest::Client::new();
+    let client = crate::http::create_http_client();
     let token = get_access_token(&client, profile).await?;
 
     let url = format!("{}/api/v0/submission/", profile.api_endpoint);

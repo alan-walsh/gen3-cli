@@ -103,7 +103,7 @@ pub async fn get(guid: &str, expand: bool) -> Result<()> {
         .active_profile()
         .ok_or_else(|| anyhow::anyhow!("No active profile. Run `gen3 auth setup` first."))?;
 
-    let client = reqwest::Client::new();
+    let client = crate::http::create_http_client();
     let mut req = client.get(format!("{}/index/{}", profile.api_endpoint, guid));
     if expand {
         req = req.query(&[("expand", "true")]);
@@ -139,7 +139,7 @@ pub async fn list(
         .active_profile()
         .ok_or_else(|| anyhow::anyhow!("No active profile. Run `gen3 auth setup` first."))?;
 
-    let client = reqwest::Client::new();
+    let client = crate::http::create_http_client();
     let mut req = client.get(format!("{}/index", profile.api_endpoint));
 
     if let Some(l) = limit {
@@ -202,7 +202,7 @@ pub async fn create(
         .active_profile()
         .ok_or_else(|| anyhow::anyhow!("No active profile. Run `gen3 auth setup` first."))?;
 
-    let client = reqwest::Client::new();
+    let client = crate::http::create_http_client();
     let token = get_access_token(&client, profile).await?;
     let hash_map = parse_hashes(hashes)?;
 
@@ -258,7 +258,7 @@ pub async fn update(
         .active_profile()
         .ok_or_else(|| anyhow::anyhow!("No active profile. Run `gen3 auth setup` first."))?;
 
-    let client = reqwest::Client::new();
+    let client = crate::http::create_http_client();
     let token = get_access_token(&client, profile).await?;
 
     let mut body = serde_json::Map::new();
@@ -311,7 +311,7 @@ pub async fn delete(guid: &str, rev: &str) -> Result<()> {
         .active_profile()
         .ok_or_else(|| anyhow::anyhow!("No active profile. Run `gen3 auth setup` first."))?;
 
-    let client = reqwest::Client::new();
+    let client = crate::http::create_http_client();
     let token = get_access_token(&client, profile).await?;
 
     let url = format!("{}/index/{}", profile.api_endpoint, guid);
@@ -339,7 +339,7 @@ pub async fn versions(guid: &str) -> Result<()> {
         .active_profile()
         .ok_or_else(|| anyhow::anyhow!("No active profile. Run `gen3 auth setup` first."))?;
 
-    let client = reqwest::Client::new();
+    let client = crate::http::create_http_client();
     let url = format!("{}/index/{}/versions", profile.api_endpoint, guid);
     let response = client
         .get(&url)
@@ -389,7 +389,7 @@ pub async fn latest(guid: &str, has_version: bool) -> Result<()> {
         .active_profile()
         .ok_or_else(|| anyhow::anyhow!("No active profile. Run `gen3 auth setup` first."))?;
 
-    let client = reqwest::Client::new();
+    let client = crate::http::create_http_client();
     let mut req = client.get(format!("{}/index/{}/latest", profile.api_endpoint, guid));
     if has_version {
         req = req.query(&[("has_version", "true")]);

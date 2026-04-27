@@ -7,7 +7,7 @@ pub async fn status() -> Result<()> {
         .active_profile()
         .ok_or_else(|| anyhow::anyhow!("No active profile. Run `gen3 auth setup` first."))?;
 
-    let client = reqwest::Client::new();
+    let client = crate::http::create_http_client();
     let url = format!("{}/api/_status", profile.api_endpoint);
     let response = client
         .get(&url)
@@ -29,7 +29,7 @@ pub async fn version() -> Result<()> {
         .active_profile()
         .ok_or_else(|| anyhow::anyhow!("No active profile. Run `gen3 auth setup` first."))?;
 
-    let client = reqwest::Client::new();
+    let client = crate::http::create_http_client();
     let url = format!("{}/api/_version", profile.api_endpoint);
     let response = client
         .get(&url)
