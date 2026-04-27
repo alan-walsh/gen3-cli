@@ -27,7 +27,7 @@ impl Default for Profile {
     fn default() -> Self {
         Profile {
             api_endpoint: String::new(),
-            api_key: SecretString::from(String::new()),
+            api_key: default_secret_string(),
             key_id: String::new(),
         }
     }
