@@ -456,6 +456,18 @@ mod tests {
     }
 
     #[test]
+    fn unique_local_ipv6_is_rejected() {
+        let err = validate_endpoint("https://[fc00::1]/api").unwrap_err();
+        assert!(err.to_string().contains("loopback or private"), "got: {err}");
+    }
+
+    #[test]
+    fn link_local_ipv6_is_rejected() {
+        let err = validate_endpoint("https://[fe80::1]/api").unwrap_err();
+        assert!(err.to_string().contains("loopback or private"), "got: {err}");
+    }
+
+    #[test]
     fn ipv4_mapped_ipv6_loopback_is_rejected() {
         // ::ffff:127.0.0.1 — IPv4-mapped IPv6 loopback bypass
         let err = validate_endpoint("https://[::ffff:127.0.0.1]/api").unwrap_err();
