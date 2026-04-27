@@ -5,16 +5,32 @@ use std::fs;
 use std::path::PathBuf;
 use anyhow::{Context, Result};
 use url::{Host, Url};
+use secrecy::{ExposeSecret, SecretString};
+
+fn default_secret_string() -> SecretString {
+    SecretString::from(String::new())
+}
 
 /// A named profile storing all credentials and endpoint info for one Gen3 commons.
-#[derive(Clone, Serialize, Deserialize, Default)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Profile {
     pub api_endpoint: String,
     /// Held in memory only — never written to the config file.
     /// Stored in and retrieved from the OS keychain.
-    #[serde(default, skip_serializing)]
-    pub api_key: String,
+    /// Wrapped in `SecretString` so the heap bytes are zeroed on drop.
+    #[serde(skip_serializing, default = "default_secret_string")]
+    pub api_key: SecretString,
     pub key_id: String,
+}
+
+impl Default for Profile {
+    fn default() -> Self {
+        Profile {
+            api_endpoint: String::new(),
+            api_key: SecretString::from(String::new()),
+            key_id: String::new(),
+        }
+    }
 }
 
 impl std::fmt::Debug for Profile {
@@ -47,7 +63,8 @@ impl std::fmt::Debug for Config {
 /// The format of the credentials JSON file downloaded from the Gen3 Fence UI.
 #[derive(Deserialize)]
 pub struct CredentialsFile {
-    pub api_key: String,
+    /// Wrapped in `SecretString` so the heap bytes are zeroed on drop.
+    pub api_key: SecretString,
     pub key_id: String,
 }
 
@@ -193,14 +210,14 @@ impl Config {
 
         let mut needs_migration = false;
         for (name, profile) in &mut config.profiles {
-            if !profile.api_key.is_empty() {
+            if !profile.api_key.expose_secret().is_empty() {
                 // Legacy plaintext api_key found in config file — migrate to OS keychain.
-                store_api_key(name, &profile.api_key)
+                store_api_key(name, profile.api_key.expose_secret())
                     .context("Failed to migrate API key to OS keychain")?;
                 needs_migration = true;
             } else {
                 // Load api_key from OS keychain.
-                profile.api_key = load_api_key(name)?;
+                profile.api_key = SecretString::from(load_api_key(name)?);
             }
         }
 
@@ -295,7 +312,7 @@ impl Config {
         if self.active_profile.is_none() {
             self.active_profile = Some(name.clone());
         }
-        store_api_key(&name, &profile.api_key)?;
+        store_api_key(&name, profile.api_key.expose_secret())?;
         self.profiles.insert(name, profile);
         self.save()
     }
@@ -327,7 +344,7 @@ mod tests {
     fn profile_debug_redacts_api_key() {
         let profile = Profile {
             api_endpoint: "https://example.org".to_string(),
-            api_key: "super-secret-key".to_string(),
+            api_key: SecretString::from("super-secret-key".to_string()),
             key_id: "key-abc123".to_string(),
         };
         let debug_output = format!("{:?}", profile);
@@ -352,7 +369,7 @@ mod tests {
     #[test]
     fn credentials_file_debug_redacts_api_key() {
         let creds = CredentialsFile {
-            api_key: "top-secret-api-key".to_string(),
+            api_key: SecretString::from("top-secret-api-key".to_string()),
             key_id: "kid-xyz".to_string(),
         };
         let debug_output = format!("{:?}", creds);
@@ -377,7 +394,7 @@ mod tests {
             "prod".to_string(),
             Profile {
                 api_endpoint: "https://prod.example.org".to_string(),
-                api_key: "prod-secret-key".to_string(),
+                api_key: SecretString::from("prod-secret-key".to_string()),
                 key_id: "prod-key-id".to_string(),
             },
         );

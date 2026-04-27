@@ -1,0 +1,300 @@
+- generic [ref=e2]:
+  - region:
+    - generic:
+      - tooltip "This user is the owner of the gen3-cli repository."
+  - generic [ref=e3]:
+    - link "Skip to content" [ref=e4] [cursor=pointer]:
+      - /url: "#start-of-content"
+    - banner [ref=e6]:
+      - heading "Navigation Menu" [level=2] [ref=e7]
+      - generic [ref=e8]:
+        - link "Homepage" [ref=e10] [cursor=pointer]:
+          - /url: /
+          - img [ref=e11]
+        - generic [ref=e13]:
+          - navigation "Global" [ref=e16]:
+            - list [ref=e17]:
+              - listitem [ref=e18]:
+                - button "Platform" [ref=e20] [cursor=pointer]:
+                  - text: Platform
+                  - img [ref=e21]
+              - listitem [ref=e23]:
+                - button "Solutions" [ref=e25] [cursor=pointer]:
+                  - text: Solutions
+                  - img [ref=e26]
+              - listitem [ref=e28]:
+                - button "Resources" [ref=e30] [cursor=pointer]:
+                  - text: Resources
+                  - img [ref=e31]
+              - listitem [ref=e33]:
+                - button "Open Source" [ref=e35] [cursor=pointer]:
+                  - text: Open Source
+                  - img [ref=e36]
+              - listitem [ref=e38]:
+                - button "Enterprise" [ref=e40] [cursor=pointer]:
+                  - text: Enterprise
+                  - img [ref=e41]
+              - listitem [ref=e43]:
+                - link "Pricing" [ref=e44] [cursor=pointer]:
+                  - /url: https://github.com/pricing
+                  - generic [ref=e45]: Pricing
+          - generic [ref=e46]:
+            - button "Search or jump to…" [ref=e49] [cursor=pointer]:
+              - img [ref=e51]
+            - link "Sign in" [ref=e54] [cursor=pointer]:
+              - /url: /login?return_to=https%3A%2F%2Fgithub.com%2Falan-walsh%2Fgen3-cli%2Fissues%2F2
+            - link "Sign up" [ref=e55] [cursor=pointer]:
+              - /url: /signup?ref_cta=Sign+up&ref_loc=header+logged+out&ref_page=%2F%3Cuser-name%3E%2F%3Crepo-name%3E%2Fvoltron%2Fissues_fragments%2Fissue_layout&source=header-repo&source_repo=alan-walsh%2Fgen3-cli
+            - button "Appearance settings" [ref=e58] [cursor=pointer]:
+              - img
+  - main [ref=e62]:
+    - generic [ref=e63]:
+      - generic [ref=e64]:
+        - generic [ref=e66]:
+          - img [ref=e67]
+          - link "alan-walsh" [ref=e70] [cursor=pointer]:
+            - /url: /alan-walsh
+          - generic [ref=e71]: /
+          - strong [ref=e72]:
+            - link "gen3-cli" [ref=e73] [cursor=pointer]:
+              - /url: /alan-walsh/gen3-cli
+          - generic [ref=e74]: Public
+        - generic [ref=e75]:
+          - list:
+            - listitem [ref=e76]:
+              - link "You must be signed in to change notification settings" [ref=e77] [cursor=pointer]:
+                - /url: /login?return_to=%2Falan-walsh%2Fgen3-cli
+                - img [ref=e78]
+                - text: Notifications
+            - listitem [ref=e80]:
+              - link "Fork 0" [ref=e81] [cursor=pointer]:
+                - /url: /login?return_to=%2Falan-walsh%2Fgen3-cli
+                - img [ref=e82]
+                - text: Fork
+                - generic "0" [ref=e84]
+            - listitem [ref=e85]:
+              - link "You must be signed in to star a repository" [ref=e87] [cursor=pointer]:
+                - /url: /login?return_to=%2Falan-walsh%2Fgen3-cli
+                - img [ref=e88]
+                - text: Star
+                - generic "0 users starred this repository" [ref=e90]: "0"
+      - navigation "Repository" [ref=e91]:
+        - list [ref=e92]:
+          - listitem [ref=e93]:
+            - link "Code" [ref=e94] [cursor=pointer]:
+              - /url: /alan-walsh/gen3-cli
+              - img [ref=e95]
+              - generic [ref=e97]: Code
+          - listitem [ref=e98]:
+            - link "Issues 1" [ref=e99] [cursor=pointer]:
+              - /url: /alan-walsh/gen3-cli/issues
+              - img [ref=e100]
+              - generic [ref=e103]: Issues
+              - generic "1" [ref=e104]
+          - listitem [ref=e105]:
+            - link "Pull requests" [ref=e106] [cursor=pointer]:
+              - /url: /alan-walsh/gen3-cli/pulls
+              - img [ref=e107]
+              - generic [ref=e109]: Pull requests
+          - listitem [ref=e110]:
+            - link "Actions" [ref=e111] [cursor=pointer]:
+              - /url: /alan-walsh/gen3-cli/actions
+              - img [ref=e112]
+              - generic [ref=e114]: Actions
+          - listitem [ref=e115]:
+            - link "Projects" [ref=e116] [cursor=pointer]:
+              - /url: /alan-walsh/gen3-cli/projects
+              - img [ref=e117]
+              - generic [ref=e119]: Projects
+          - listitem [ref=e120]:
+            - link "Security and quality" [ref=e121] [cursor=pointer]:
+              - /url: /alan-walsh/gen3-cli/security
+              - img [ref=e122]
+              - generic [ref=e124]: Security and quality
+          - listitem [ref=e125]:
+            - link "Insights" [ref=e126] [cursor=pointer]:
+              - /url: /alan-walsh/gen3-cli/pulse
+              - img [ref=e127]
+              - generic [ref=e129]: Insights
+    - generic [ref=e137]:
+      - region "Header" [ref=e139]:
+        - generic [ref=e140]:
+          - 'heading "[Security] \\Debug\\ Derive Exposes Secrets in Logs/Panics #2" [level=1] [ref=e142]'
+          - generic [ref=e144]:
+            - button "New issue" [ref=e146] [cursor=pointer]:
+              - generic [ref=e148]: New issue
+            - button "Copy link" [ref=e149] [cursor=pointer]:
+              - img [ref=e150]
+      - generic [ref=e158]:
+        - img "Issue" [ref=e159]
+        - text: Open
+      - generic [ref=e163]:
+        - generic [ref=e164]:
+          - generic [ref=e166]:
+            - link "@alan-walsh's profile" [ref=e167] [cursor=pointer]:
+              - /url: https://github.com/alan-walsh
+              - img "@alan-walsh" [ref=e168]
+            - generic [ref=e169]:
+              - heading "Description" [level=2] [ref=e170]
+              - generic [ref=e172]:
+                - generic [ref=e174]:
+                  - generic [ref=e175]:
+                    - link "alan-walsh" [ref=e177] [cursor=pointer]:
+                      - /url: https://github.com/alan-walsh
+                    - generic [ref=e178]:
+                      - text: opened
+                      - link "on Apr 25, 2026now" [ref=e179] [cursor=pointer]:
+                        - /url: https://github.com/alan-walsh/gen3-cli/issues/2#issue-4328016653
+                        - generic "Apr 25, 2026, 7:53 AM EDT" [ref=e180]: on Apr 25, 2026now
+                  - generic [ref=e182]:
+                    - generic "This user is the owner of the gen3-cli repository." [ref=e184]: Owner
+                    - button "Issue body actions" [ref=e186] [cursor=pointer]:
+                      - img [ref=e187]
+                - generic [ref=e189]:
+                  - generic [ref=e191]:
+                    - heading "[F-2] \\Debug\\ Derive Exposes Secrets in Logs/Panics — 🔴 HIGH" [level=2] [ref=e192]
+                    - paragraph [ref=e193]:
+                      - strong [ref=e194]: "Category:"
+                      - text: Type System / Secret Handling
+                      - strong [ref=e195]: "Confirmed by:"
+                      - text: Reviewer C
+                      - strong [ref=e196]: "Location:"
+                      - text: \src/config.rs:8, 16, 24\
+                    - separator [ref=e197]
+                    - heading "Description" [level=3] [ref=e198]
+                    - paragraph [ref=e199]: "The \\Profile, \\Config, and \\CredentialsFile\\ structs all derive \\Debug:"
+                    - paragraph [ref=e200]:
+                      - text: \
+                      - text: ust
+                      - text: "#[derive(Debug, Clone, Serialize, Deserialize, Default)]"
+                      - text: "pub struct Profile {"
+                      - text: "pub api_endpoint: String,"
+                      - text: "pub api_key: String, // ← Exposed in Debug output"
+                      - text: "pub key_id: String, // ← Exposed in Debug output"
+                      - text: "}"
+                      - text: \\
+                    - paragraph [ref=e201]: "Any use of {:?}, \\dbg!(), panic messages, or \\�ssert!\\ failures will print credentials in plaintext. In CI/CD environments, this means credentials appear in build logs."
+                    - separator [ref=e202]
+                    - heading "Exploit Scenario" [level=3] [ref=e203]
+                    - paragraph [ref=e204]:
+                      - text: \
+                      - text: ust
+                      - text: "// Developer debugging: credentials leaked to terminal/logs"
+                      - text: "println!(\"Loading profile: {:?}\", profile);"
+                    - paragraph [ref=e205]:
+                      - text: "// Panic in production: credentials in crash dump"
+                      - text: let profile = config.active_profile().expect("No profile");
+                      - text: // If this panics with context, Debug output includes api_key
+                      - text: \\
+                    - separator [ref=e206]
+                    - heading "Recommended Remediation" [level=3] [ref=e207]
+                    - paragraph [ref=e208]:
+                      - text: \
+                      - text: ust
+                      - text: "use secrecy::{ExposeSecret, SecretString};"
+                    - paragraph [ref=e209]:
+                      - text: "#[derive(Clone, Serialize, Deserialize, Default)]"
+                      - text: "pub struct Profile {"
+                      - text: "pub api_endpoint: String,"
+                      - text: "#[serde(serialize_with = \"serialize_secret\")]"
+                      - text: "pub api_key: SecretString,"
+                      - text: "pub key_id: String,"
+                      - text: "}"
+                    - paragraph [ref=e210]:
+                      - text: "impl std::fmt::Debug for Profile {"
+                      - text: "fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {"
+                      - text: f.debug_struct("Profile")
+                      - text: .field("api_endpoint", &self.api_endpoint)
+                      - text: .field("api_key", &"[REDACTED]")
+                      - text: .field("key_id", &self.key_id)
+                      - text: .finish()
+                      - text: "}"
+                      - text: "}"
+                      - text: \\
+                    - paragraph [ref=e211]: "Remove the #[derive(Debug)]\\ from \\Profile, \\Config, and \\CredentialsFile, and provide custom \\Debug\\ implementations that redact all secret fields. Consider also adopting \\secrecy::SecretString\\ for the \\�pi_key\\ field so it is zeroed on drop (see related finding F-3)."
+                  - generic:
+                    - toolbar "Reactions"
+          - generic [ref=e213]:
+            - heading "Activity" [level=2] [ref=e214]
+            - generic [ref=e215]:
+              - link "Sign up for free" [ref=e216] [cursor=pointer]:
+                - /url: /signup?return_to=https://github.com/alan-walsh/gen3-cli/issues/2
+                - generic [ref=e218]: Sign up for free
+              - generic [ref=e219]:
+                - strong [ref=e220]: to join this conversation on GitHub.
+                - text: Already have an account?
+              - link "Sign in to comment" [ref=e221] [cursor=pointer]:
+                - /url: /login?return_to=https://github.com/alan-walsh/gen3-cli/issues/2
+        - generic [ref=e223]:
+          - heading "Metadata" [level=2] [ref=e224]
+          - generic [ref=e226]:
+            - generic [ref=e228]:
+              - generic [ref=e229]:
+                - heading "Assignees" [level=3]
+              - generic [ref=e230]: No one assigned
+            - generic [ref=e232]:
+              - generic [ref=e233]:
+                - heading "Labels" [level=3]
+              - generic [ref=e234]: No labels
+            - generic [ref=e236]:
+              - generic [ref=e237]:
+                - heading "Projects" [level=3]
+              - generic [ref=e238]: No projects
+            - generic [ref=e240]:
+              - generic [ref=e241]:
+                - heading "Milestone" [level=3]
+              - generic [ref=e242]: No milestone
+            - generic [ref=e244]:
+              - generic [ref=e245]:
+                - heading "Relationships" [level=3]
+              - generic [ref=e246]: None yet
+            - generic [ref=e247]:
+              - generic [ref=e249]:
+                - heading "Development" [level=3]
+              - generic [ref=e250]:
+                - generic [ref=e251]: No branches or pull requests
+                - list
+            - generic [ref=e252]:
+              - generic [ref=e254]:
+                - heading "Participants" [level=3]
+              - link "@alan-walsh" [ref=e258] [cursor=pointer]:
+                - /url: /alan-walsh
+                - img "@alan-walsh" [ref=e259]
+            - heading "Issue actions" [level=2] [ref=e260]
+            - list
+  - contentinfo [ref=e261]:
+    - heading "Footer" [level=2] [ref=e262]
+    - generic [ref=e263]:
+      - generic [ref=e264]:
+        - link "GitHub Homepage" [ref=e265] [cursor=pointer]:
+          - /url: https://github.com
+          - img [ref=e266]
+        - generic [ref=e268]: © 2026 GitHub, Inc.
+      - navigation "Footer" [ref=e269]:
+        - heading "Footer navigation" [level=3] [ref=e270]
+        - list "Footer navigation" [ref=e271]:
+          - listitem [ref=e272]:
+            - link "Terms" [ref=e273] [cursor=pointer]:
+              - /url: https://docs.github.com/site-policy/github-terms/github-terms-of-service
+          - listitem [ref=e274]:
+            - link "Privacy" [ref=e275] [cursor=pointer]:
+              - /url: https://docs.github.com/site-policy/privacy-policies/github-privacy-statement
+          - listitem [ref=e276]:
+            - link "Security" [ref=e277] [cursor=pointer]:
+              - /url: https://github.com/security
+          - listitem [ref=e278]:
+            - link "Status" [ref=e279] [cursor=pointer]:
+              - /url: https://www.githubstatus.com/
+          - listitem [ref=e280]:
+            - link "Community" [ref=e281] [cursor=pointer]:
+              - /url: https://github.community/
+          - listitem [ref=e282]:
+            - link "Docs" [ref=e283] [cursor=pointer]:
+              - /url: https://docs.github.com/
+          - listitem [ref=e284]:
+            - link "Contact" [ref=e285] [cursor=pointer]:
+              - /url: https://support.github.com?tags=dotcom-footer
+          - listitem [ref=e286]:
+            - button "Manage cookies" [ref=e288] [cursor=pointer]
+          - listitem [ref=e289]:
+            - button "Do not share my personal information" [ref=e291] [cursor=pointer]
