@@ -1,5 +1,6 @@
 use crate::config::Profile;
 use anyhow::{Context, Result};
+use secrecy::ExposeSecret;
 use serde::Deserialize;
 
 #[derive(Deserialize)]
@@ -9,7 +10,7 @@ struct TokenResponse {
 
 pub async fn get_access_token(client: &reqwest::Client, profile: &Profile) -> Result<String> {
     let url = format!("{}/user/credentials/api/access_token", profile.api_endpoint);
-    let body = serde_json::json!({ "api_key": profile.api_key });
+    let body = serde_json::json!({ "api_key": profile.api_key.expose_secret() });
 
     let response = client
         .post(&url)
