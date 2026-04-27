@@ -96,7 +96,7 @@ pub fn validate_endpoint(endpoint: &str) -> Result<()> {
         Some(Host::Ipv4(addr)) => {
             if addr.is_loopback() || addr.is_private() || addr.is_link_local() {
                 anyhow::bail!(
-                    "api_endpoint IP address '{}' is private or reserved. \
+                    "api_endpoint IP address '{}' is loopback, private, or link-local. \
                      Use a public HTTPS endpoint.",
                     addr
                 );
@@ -119,8 +119,8 @@ pub fn validate_endpoint(endpoint: &str) -> Result<()> {
             if let Some(ipv4) = addr.to_ipv4_mapped().or_else(|| addr.to_ipv4()) {
                 if ipv4.is_loopback() || ipv4.is_private() || ipv4.is_link_local() {
                     anyhow::bail!(
-                        "api_endpoint IPv6 address '{}' maps to a private or reserved IPv4 \
-                         address. Use a public HTTPS endpoint.",
+                        "api_endpoint IPv6 address '{}' maps to a loopback, private, or \
+                         link-local IPv4 address. Use a public HTTPS endpoint.",
                         addr
                     );
                 }
@@ -200,6 +200,17 @@ impl Config {
         if needs_migration {
             // Rewrite the config file without the plaintext api_key fields.
             config.save()?;
+        }
+
+        // Validate all profile endpoints to catch manually-edited unsafe configs.
+        for (name, profile) in &config.profiles {
+            validate_endpoint(&profile.api_endpoint)
+                .with_context(|| {
+                    format!(
+                        "Profile '{}' has an invalid api_endpoint: '{}'",
+                        name, profile.api_endpoint
+                    )
+                })?;
         }
 
         Ok(config)
@@ -410,7 +421,7 @@ mod tests {
     #[test]
     fn loopback_ipv4_is_rejected() {
         let err = validate_endpoint("https://127.0.0.1/api").unwrap_err();
-        assert!(err.to_string().contains("private or reserved"), "got: {err}");
+        assert!(err.to_string().contains("loopback, private, or link-local"), "got: {err}");
     }
 
     #[test]
@@ -419,8 +430,8 @@ mod tests {
             let endpoint = format!("https://{addr}/api");
             let err = validate_endpoint(&endpoint).unwrap_err();
             assert!(
-                err.to_string().contains("private or reserved"),
-                "expected private address error for {addr}, got: {err}"
+                err.to_string().contains("loopback, private, or link-local"),
+                "expected loopback/private/link-local error for {addr}, got: {err}"
             );
         }
     }
@@ -428,7 +439,7 @@ mod tests {
     #[test]
     fn link_local_ipv4_is_rejected() {
         let err = validate_endpoint("https://169.254.169.254/latest/meta-data").unwrap_err();
-        assert!(err.to_string().contains("private or reserved"), "got: {err}");
+        assert!(err.to_string().contains("loopback, private, or link-local"), "got: {err}");
     }
 
     #[test]
@@ -442,7 +453,7 @@ mod tests {
         // ::ffff:127.0.0.1 — IPv4-mapped IPv6 loopback bypass
         let err = validate_endpoint("https://[::ffff:127.0.0.1]/api").unwrap_err();
         assert!(
-            err.to_string().contains("maps to a private or reserved IPv4"),
+            err.to_string().contains("maps to a loopback, private, or link-local IPv4"),
             "got: {err}"
         );
     }
@@ -452,7 +463,7 @@ mod tests {
         // ::ffff:169.254.169.254 — IPv4-mapped IPv6 AWS metadata bypass
         let err = validate_endpoint("https://[::ffff:169.254.169.254]/latest/meta-data").unwrap_err();
         assert!(
-            err.to_string().contains("maps to a private or reserved IPv4"),
+            err.to_string().contains("maps to a loopback, private, or link-local IPv4"),
             "got: {err}"
         );
     }
@@ -462,7 +473,7 @@ mod tests {
         // ::ffff:10.0.0.1 — IPv4-mapped IPv6 private RFC-1918 bypass
         let err = validate_endpoint("https://[::ffff:10.0.0.1]/api").unwrap_err();
         assert!(
-            err.to_string().contains("maps to a private or reserved IPv4"),
+            err.to_string().contains("maps to a loopback, private, or link-local IPv4"),
             "got: {err}"
         );
     }
