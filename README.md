@@ -142,6 +142,20 @@ Elasticsearch-backed aggregation, faceted counts, histograms, and bulk record do
 | `guppy system version` | Version info |
 | `guppy system indices` | List all Elasticsearch indices |
 
+### `gen3 audit-service`
+
+Authenticated audit-log queries plus public service inspection.
+
+| Sub-command | Description |
+|---|---|
+| `audit-service logs query --category <category>` | Query `login` or `presigned_url` logs |
+| `audit-service logs query --category <category> --all-pages` | Fetch every result page |
+| `audit-service logs query --category <category> --count` | Count matching logs |
+| `audit-service logs query --category <category> --group-by <field>` | Group matching logs |
+| `audit-service system status` | Health and database check |
+| `audit-service system version` | Deployed service version |
+| `audit-service system schema` | Category schemas and fields |
+
 ---
 
 ## Configuration
