@@ -46,6 +46,12 @@ enum Commands {
         #[command(subcommand)]
         resource: commands::GuppyResource,
     },
+    /// Audit log queries and service inspection
+    #[command(name = "audit-service")]
+    AuditService {
+        #[command(subcommand)]
+        resource: commands::AuditServiceResource,
+    },
 }
 
 #[derive(Subcommand)]
@@ -81,6 +87,9 @@ async fn main() -> Result<()> {
         }
         Some(Commands::Guppy { resource }) => {
             commands::guppy::run(resource).await?;
+        }
+        Some(Commands::AuditService { resource }) => {
+            commands::audit::run(resource).await?;
         }
     }
 

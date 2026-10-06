@@ -33,7 +33,7 @@ skills/
 | gen3-sheepdog | ✅ | ✅ `gen3 sheepdog` |
 | gen3-metadata-service | ✅ | — |
 | gen3-manifestservice | ✅ | — |
-| gen3-audit-service | ✅ | — |
+| gen3-audit-service | ✅ | ✅ `gen3 audit-service` |
 | gen3-workspace-token-service | ✅ | — |
 | gen3-hatchery | ✅ | — |
 | gen3-arborist | ✅ | — |
