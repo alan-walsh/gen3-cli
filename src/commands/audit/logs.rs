@@ -16,6 +16,7 @@ struct QuerySpec<'a> {
 }
 
 pub async fn query(options: QueryOptions) -> Result<()> {
+    validate_query_options(&options)?;
     let QueryOptions {
         category,
         start,
@@ -26,13 +27,6 @@ pub async fn query(options: QueryOptions) -> Result<()> {
         all_pages,
         output,
     } = options;
-    if matches!((start, stop), (Some(start), Some(stop)) if start > stop) {
-        anyhow::bail!("--start must be less than or equal to --stop");
-    }
-    if all_pages && (count || !group_by.is_empty()) {
-        anyhow::bail!("--all-pages cannot be combined with --count or --group-by");
-    }
-
     let config = Config::load().context("Failed to load config")?;
     let profile = config
         .active_profile()
@@ -49,6 +43,10 @@ pub async fn query(options: QueryOptions) -> Result<()> {
     };
 
     let first_page = fetch_page(&client, profile, &spec, None, &mut token).await?;
+    if all_pages && output != OutputFormat::Json {
+        return stream_pages(&client, profile, &spec, first_page, &mut token, output).await;
+    }
+
     let result = if all_pages {
         fetch_remaining_pages(&client, profile, &spec, first_page, &mut token).await?
     } else {
@@ -58,6 +56,63 @@ pub async fn query(options: QueryOptions) -> Result<()> {
     let rendered = render_output(&result, output)?;
     if !rendered.is_empty() {
         println!("{rendered}");
+    }
+    Ok(())
+}
+
+fn validate_query_options(options: &QueryOptions) -> Result<()> {
+    if matches!((options.start, options.stop), (Some(start), Some(stop)) if start > stop) {
+        anyhow::bail!("--start must be less than or equal to --stop");
+    }
+    if options.all_pages && (options.count || !options.group_by.is_empty()) {
+        anyhow::bail!("--all-pages cannot be combined with --count or --group-by");
+    }
+    if options.all_pages && (options.start.is_none() || options.stop.is_none()) {
+        anyhow::bail!("--all-pages requires both --start and --stop to bound the audit query");
+    }
+    Ok(())
+}
+
+async fn stream_pages(
+    client: &Client,
+    profile: &Profile,
+    spec: &QuerySpec<'_>,
+    first_page: Value,
+    token: &mut String,
+    output: OutputFormat,
+) -> Result<()> {
+    let mut page = first_page;
+    let mut seen = HashSet::new();
+    let mut csv_columns = None;
+    let mut wrote_output = false;
+
+    loop {
+        let chunk = match output {
+            OutputFormat::Jsonl => render_jsonl(&page)?,
+            OutputFormat::Csv => render_csv_page(&page, &mut csv_columns)?,
+            OutputFormat::Json => unreachable!("JSON pagination is collected before rendering"),
+        };
+        if !chunk.is_empty() {
+            if wrote_output {
+                println!();
+            }
+            print!("{chunk}");
+            wrote_output = true;
+        }
+
+        let Some(timestamp) = page_cursor(&page)? else {
+            break;
+        };
+        if !seen.insert(timestamp) {
+            anyhow::bail!(
+                "Audit Service returned the pagination cursor {timestamp} more than once"
+            );
+        }
+        page = fetch_page(client, profile, spec, Some(timestamp), token).await?;
+    }
+
+    if wrote_output {
+        println!();
     }
     Ok(())
 }
@@ -225,6 +280,11 @@ fn render_jsonl(response: &Value) -> Result<String> {
 }
 
 fn render_csv(response: &Value) -> Result<String> {
+    let mut columns = None;
+    render_csv_page(response, &mut columns)
+}
+
+fn render_csv_page(response: &Value, columns: &mut Option<Vec<String>>) -> Result<String> {
     let data = response
         .get("data")
         .context("Audit Service response is missing data")?;
@@ -238,25 +298,36 @@ fn render_csv(response: &Value) -> Result<String> {
         return Ok(String::new());
     }
 
-    let mut columns = BTreeSet::new();
+    let include_header = columns.is_none();
+    if include_header {
+        let mut discovered = BTreeSet::new();
+        for row in rows {
+            let object = row
+                .as_object()
+                .context("CSV output requires audit rows to be JSON objects")?;
+            discovered.extend(object.keys().cloned());
+        }
+        *columns = Some(discovered.into_iter().collect());
+    }
+    let columns = columns.as_ref().expect("columns initialized above");
+
+    let mut lines = Vec::with_capacity(rows.len() + usize::from(include_header));
+    if include_header {
+        lines.push(
+            columns
+                .iter()
+                .map(|name| csv_escape(name))
+                .collect::<Vec<_>>()
+                .join(","),
+        );
+    }
     for row in rows {
         let object = row
             .as_object()
             .context("CSV output requires audit rows to be JSON objects")?;
-        columns.extend(object.keys().cloned());
-    }
-    let columns: Vec<String> = columns.into_iter().collect();
-
-    let mut lines = Vec::with_capacity(rows.len() + 1);
-    lines.push(
-        columns
-            .iter()
-            .map(|name| csv_escape(name))
-            .collect::<Vec<_>>()
-            .join(","),
-    );
-    for row in rows {
-        let object = row.as_object().expect("rows validated above");
+        if object.keys().any(|key| !columns.contains(key)) {
+            anyhow::bail!("Audit Service returned inconsistent fields across CSV pages");
+        }
         lines.push(
             columns
                 .iter()
@@ -271,10 +342,18 @@ fn render_csv(response: &Value) -> Result<String> {
 fn csv_cell(value: &Value) -> String {
     let raw = match value {
         Value::Null => String::new(),
-        Value::String(value) => value.clone(),
+        Value::String(value) => spreadsheet_safe(value),
         value => serde_json::to_string(value).unwrap_or_default(),
     };
     csv_escape(&raw)
+}
+
+fn spreadsheet_safe(value: &str) -> String {
+    if value.starts_with(['=', '+', '-', '@']) {
+        format!("'{value}")
+    } else {
+        value.to_owned()
+    }
 }
 
 fn csv_escape(value: &str) -> String {
@@ -289,6 +368,9 @@ fn csv_escape(value: &str) -> String {
 mod tests {
     use super::*;
     use reqwest::header::AUTHORIZATION;
+    use secrecy::SecretString;
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use tokio::net::TcpListener;
 
     fn spec<'a>(filters: &'a [String], group_by: &'a [String], count: bool) -> QuerySpec<'a> {
         QuerySpec {
@@ -299,6 +381,89 @@ mod tests {
             group_by,
             count,
         }
+    }
+
+    fn query_options() -> QueryOptions {
+        QueryOptions {
+            category: AuditCategory::PresignedUrl,
+            start: Some(10),
+            stop: Some(20),
+            filters: Vec::new(),
+            group_by: Vec::new(),
+            count: false,
+            all_pages: false,
+            output: OutputFormat::Json,
+        }
+    }
+
+    async fn spawn_http_sequence(
+        responses: Vec<(u16, &'static str)>,
+    ) -> (String, tokio::task::JoinHandle<Vec<String>>) {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let handle = tokio::spawn(async move {
+            let mut requests = Vec::new();
+            for (status, body) in responses {
+                let (mut socket, _) = listener.accept().await.unwrap();
+                let mut request = Vec::new();
+                let mut buffer = [0_u8; 4096];
+                loop {
+                    let read = socket.read(&mut buffer).await.unwrap();
+                    if read == 0 {
+                        break;
+                    }
+                    request.extend_from_slice(&buffer[..read]);
+                    if request_is_complete(&request) {
+                        break;
+                    }
+                }
+                requests.push(String::from_utf8(request).unwrap());
+
+                let reason = if status == 200 { "OK" } else { "Unauthorized" };
+                let response = format!(
+                    "HTTP/1.1 {status} {reason}\r\nContent-Type: application/json\r\n\
+                     Content-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                    body.len()
+                );
+                socket.write_all(response.as_bytes()).await.unwrap();
+            }
+            requests
+        });
+        (format!("http://{address}"), handle)
+    }
+
+    fn request_is_complete(request: &[u8]) -> bool {
+        let Some(header_end) = request.windows(4).position(|window| window == b"\r\n\r\n") else {
+            return false;
+        };
+        let headers = String::from_utf8_lossy(&request[..header_end]);
+        let content_length = headers
+            .lines()
+            .filter_map(|line| line.split_once(':'))
+            .find(|(name, _)| name.eq_ignore_ascii_case("content-length"))
+            .and_then(|(_, value)| value.trim().parse::<usize>().ok())
+            .unwrap_or(0);
+        request.len() >= header_end + 4 + content_length
+    }
+
+    fn mock_profile(api_endpoint: String) -> Profile {
+        Profile {
+            api_endpoint,
+            api_key: SecretString::from("api-key".to_string()),
+            key_id: "key-id".to_string(),
+        }
+    }
+
+    #[test]
+    fn all_pages_requires_a_bounded_time_window() {
+        let mut options = query_options();
+        options.all_pages = true;
+        options.stop = None;
+
+        let error = validate_query_options(&options).unwrap_err();
+        assert!(error
+            .to_string()
+            .contains("requires both --start and --stop"));
     }
 
     #[test]
@@ -356,6 +521,58 @@ mod tests {
         );
     }
 
+    #[tokio::test]
+    async fn unauthorized_query_refreshes_token_once() {
+        let (endpoint, server) = spawn_http_sequence(vec![
+            (401, ""),
+            (200, r#"{"access_token":"new-token"}"#),
+            (200, r#"{"nextTimeStamp":null,"data":[]}"#),
+        ])
+        .await;
+        let profile = mock_profile(endpoint);
+        let client = crate::http::create_http_client();
+        let mut token = "old-token".to_string();
+
+        let response = fetch_page(&client, &profile, &spec(&[], &[], false), None, &mut token)
+            .await
+            .unwrap();
+        let requests = server.await.unwrap();
+
+        assert_eq!(response["data"], serde_json::json!([]));
+        assert_eq!(token, "new-token");
+        assert!(requests[0].contains("authorization: Bearer old-token"));
+        assert!(requests[1].starts_with("POST /user/credentials/api/access_token "));
+        assert!(requests[2].contains("authorization: Bearer new-token"));
+    }
+
+    #[tokio::test]
+    async fn second_unauthorized_response_is_not_retried() {
+        let (endpoint, server) = spawn_http_sequence(vec![
+            (401, ""),
+            (200, r#"{"access_token":"new-token"}"#),
+            (401, ""),
+        ])
+        .await;
+        let profile = mock_profile(endpoint);
+        let client = crate::http::create_http_client();
+        let mut token = "old-token".to_string();
+
+        let error = fetch_page(&client, &profile, &spec(&[], &[], false), None, &mut token)
+            .await
+            .unwrap_err();
+        let requests = server.await.unwrap();
+
+        assert!(error.to_string().contains("401"));
+        assert_eq!(requests.len(), 3);
+        assert_eq!(
+            requests
+                .iter()
+                .filter(|request| request.starts_with("POST "))
+                .count(),
+            1
+        );
+    }
+
     #[test]
     fn pagination_cursor_and_rows_are_combined() {
         let first = serde_json::json!({
@@ -399,5 +616,29 @@ mod tests {
             "action,guid\ndownload,\"a,b\"\nupload,c"
         );
         assert_eq!(render_csv(&count).unwrap(), "count\n2");
+    }
+
+    #[test]
+    fn csv_output_neutralizes_formulas_and_streams_one_header() {
+        let first = serde_json::json!({
+            "data": [{"username": "=HYPERLINK(\"https://example.org\")"}]
+        });
+        let second = serde_json::json!({
+            "data": [
+                {"username": "+cmd"},
+                {"username": "-1+1"},
+                {"username": "@SUM(A1:A2)"}
+            ]
+        });
+        let mut columns = None;
+
+        assert_eq!(
+            render_csv_page(&first, &mut columns).unwrap(),
+            "username\n\"'=HYPERLINK(\"\"https://example.org\"\")\""
+        );
+        assert_eq!(
+            render_csv_page(&second, &mut columns).unwrap(),
+            "'+cmd\n'-1+1\n'@SUM(A1:A2)"
+        );
     }
 }

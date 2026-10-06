@@ -117,7 +117,7 @@ Map flags to query parameters. Repeat a field flag to provide multiple values.
 | `--filter <field=value>` | `<field>=<value>` | Filter on a field defined for the category. Repeatable. |
 | `--group-by <field>` | `groupby=<field>` | Return counts grouped by a category field. Repeatable. |
 | `--count` | `count` | Return the number of matching rows instead of rows. |
-| `--all-pages` | client-side | Follow `nextTimeStamp` until it is null. Do not combine with `--count` or `--group-by`. |
+| `--all-pages` | client-side | Follow `nextTimeStamp` until it is null. Requires both `--start` and `--stop`; do not combine with `--count` or `--group-by`. JSONL and CSV pages are streamed. |
 | `--output <format>` | client-side | Render `json`, `jsonl`, or `csv`; do not send this to the service. |
 
 The raw API accepts field names directly as query keys. Same-key values use OR semantics; different keys use AND semantics:
@@ -238,7 +238,7 @@ The remaining category fields are optional or nullable as described above. Succe
 3. Call `GET /audit/_schema` when available to confirm live categories and fields.
 4. Translate the requested time range to Unix epoch seconds. Confirm the timezone when the user's dates are ambiguous.
 5. Build `GET /audit/log/{category}` with explicit filters and the Bearer token.
-6. For full result sets, follow `nextTimeStamp` with the exact same filters until it is null. Detect a repeated cursor and stop with an error rather than looping forever.
+6. For full result sets, require explicit `start` and `stop` bounds, then follow `nextTimeStamp` with the exact same filters until it is null. Detect a repeated cursor and stop with an error rather than looping forever.
 7. Summarize counts or key fields by default. Write raw sensitive rows to a file only when requested, and report the file format and path.
 8. On `401`, refresh the Fence token and retry once. On `403`, report the exact required Arborist resource without attempting to broaden permissions.
 
@@ -246,7 +246,7 @@ The remaining category fields are optional or nullable as described above. Succe
 
 1. Use `start` as inclusive and `stop` as exclusive; do not silently treat both ends as inclusive.
 2. URL-encode GUIDs, resource paths, usernames, identity-provider names, and all repeated query values.
-3. Do not claim that Audit Service provides server-side export jobs. CSV and JSONL exports are client-side renderings of query results.
+3. Do not claim that Audit Service provides server-side export jobs. CSV and JSONL exports are client-side renderings of query results; neutralize spreadsheet-formula prefixes in CSV string cells.
 4. Do not infer per-file authorization from `resource_paths`; current query authorization is category-wide.
 5. Avoid unbounded queries. Ask for or choose a narrow, explicit time window when the user's request permits it.
 6. Never display or persist the access token in output, logs, or export files.

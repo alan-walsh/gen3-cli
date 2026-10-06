@@ -149,7 +149,7 @@ Authenticated audit-log queries plus public service inspection.
 | Sub-command | Description |
 |---|---|
 | `audit-service logs query --category <category>` | Query `login` or `presigned_url` logs |
-| `audit-service logs query --category <category> --all-pages` | Fetch every result page |
+| `audit-service logs query --category <category> --start <epoch> --stop <epoch> --all-pages` | Fetch every result page in a bounded window |
 | `audit-service logs query --category <category> --count` | Count matching logs |
 | `audit-service logs query --category <category> --group-by <field>` | Group matching logs |
 | `audit-service system status` | Health and database check |

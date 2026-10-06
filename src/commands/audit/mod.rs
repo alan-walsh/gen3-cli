@@ -73,7 +73,7 @@ pub enum LogsMethod {
         /// Return the number of matching rows instead of rows
         #[arg(long)]
         count: bool,
-        /// Follow pagination cursors until all rows have been fetched
+        /// Follow all pages in a bounded --start/--stop window
         #[arg(long, conflicts_with_all = ["count", "group_by"])]
         all_pages: bool,
         /// Output format
